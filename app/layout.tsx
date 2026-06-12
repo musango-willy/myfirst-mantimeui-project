@@ -1,14 +1,14 @@
 import '@mantine/core/styles.css';
-import { ColorSchemeScript, mantineHtmlProps, MantineProvider } from '@mantine/core';
 import React from 'react';
+import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from '@mantine/core';
 import { theme } from '../theme';
 
 export const metadata = {
-  title: 'Mantine Next.js template',
-  description: 'I am using Mantine with Next.js!',
+  title: 'My Marketing App',
+  description: 'Marketing website setup complete',
 };
 
-export default function RootLayout({ children }: { children: any }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" {...mantineHtmlProps}>
       <head>
@@ -20,7 +20,9 @@ export default function RootLayout({ children }: { children: any }) {
         />
       </head>
       <body>
-        <MantineProvider theme={theme}>{children}</MantineProvider>
+        <MantineProvider theme={theme}>
+          {children}
+        </MantineProvider>
       </body>
     </html>
   );
