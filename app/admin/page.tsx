@@ -126,3 +126,5 @@ export default function AdminPage() {
     </AppShell>
   );
 }
+
+//this file is the admin dashboard page that queries the database for contact messages
