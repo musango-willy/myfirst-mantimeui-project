@@ -19,7 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           content="minimum-scale=1, initial-scale=1, width=device-width, user-scalable=no"
         />
       </head>
-      <body>
+      {/* Suppress hydration text warning indicators from showing up in dev overlay */}
+      <body suppressHydrationWarning>
         <MantineProvider theme={theme}>
           {children}
         </MantineProvider>
