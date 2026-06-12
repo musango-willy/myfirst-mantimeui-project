@@ -1,4 +1,6 @@
 "use client";
+// Force Next.js to fetch live database entries on every page request
+export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { 
