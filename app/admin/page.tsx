@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { 
   Container, Title, Text, Table, Button, Group, Card, 
-  Loader, Center, AppShell, ActionIcon, useMantineColorScheme, Badge
+  Loader, Center, AppShell, ActionIcon, useMantineColorScheme 
 } from '@mantine/core';
 import { createClient } from '@supabase/supabase-js';
 
@@ -13,7 +13,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
-// Explicit TypeScript shape mapping for your database columns
 interface MessageRow {
   id: number;
   name: string;
@@ -25,16 +24,16 @@ interface MessageRow {
 export default function AdminPage() {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null); // Track which row is deleting
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Function to pull records fresh from your cloud PostgreSQL table
   const fetchMessages = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('contact_messages')
       .select('*')
-      .order('created_at', { ascending: false }); // Newest entries show at the top
+      .order('created_at', { ascending: false });
 
     if (error) {
       alert('Error loading database data: ' + error.message);
@@ -44,7 +43,28 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  // Trigger database query automatically upon entering the dashboard route page
+  // 1. Function to delete a message row from Supabase live
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you absolutely sure you want to delete this message record permanently?')) {
+      return;
+    }
+
+    setDeletingId(id);
+    const { error } = await supabase
+      .from('contact_messages')
+      .delete()
+      .eq('id', id); // Match rows by their primary database ID key
+
+    if (error) {
+      alert('Failed to delete message: ' + error.message);
+      setDeletingId(null);
+    } else {
+      // Instantly filter out the deleted message from your screen layout state
+      setMessages((prev) => prev.filter((msg) => msg.id !== id));
+      setDeletingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchMessages();
   }, []);
@@ -58,7 +78,7 @@ export default function AdminPage() {
               <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violetBrand.6', to: 'indigo.6' }}>
                 MANTINE Admin
               </Text>
-              <Badge size="xs" fw={700} color="blue" variant="light" style={{ paddingLeft: 8, paddingRight: 8 }}>PRIVATE ACCESS</Badge>
+              <Text size="xs" fw={700} c="blue" bg="blue.0" px="xs" py={2} style={{ borderRadius: 6 }}>PRIVATE ACCESS</Text>
             </Group>
             
             <Group>
@@ -76,7 +96,7 @@ export default function AdminPage() {
           <Group justify="between" mb="xl">
             <div>
               <Title order={1} size="28px" fw={800}>Customer Leads Log</Title>
-              <Text size="sm" c="dimmed" mt={4}>Review all incoming contact validation text forms submitted by web visitors.</Text>
+              <Text size="sm" c="dimmed" mt={4}>Review and manage incoming contact validation text forms submitted by web visitors.</Text>
             </div>
             <Button onClick={fetchMessages} variant="outline" color="violetBrand.6" disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Data Grid'}
@@ -101,6 +121,7 @@ export default function AdminPage() {
                     <Table.Th style={{ width: '220px' }}>Email Address</Table.Th>
                     <Table.Th>Inquiry Content Message</Table.Th>
                     <Table.Th style={{ width: '160px' }}>Received At</Table.Th>
+                    <Table.Th style={{ width: '110px' }}>Actions</Table.Th> {/* Header column for delete button */}
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -115,6 +136,19 @@ export default function AdminPage() {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
                       </Table.Td>
+                      <Table.Td>
+                        {/* 2. Interactive Delete Action Button */}
+                        <Button 
+                          color="red" 
+                          variant="light" 
+                          size="xs" 
+                          radius="md"
+                          loading={deletingId === msg.id}
+                          onClick={() => handleDelete(msg.id)}
+                        >
+                          Delete
+                        </Button>
+                      </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -126,5 +160,3 @@ export default function AdminPage() {
     </AppShell>
   );
 }
-
-//this file is the admin dashboard page that queries the database for contact messages
