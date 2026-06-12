@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { 
-  Container, Title, Text, Button, Group, SimpleGrid, Card, 
-  ThemeIcon, AppShell, Burger, TextInput, Textarea, Box 
+  Container, Title, Text, Button, Group, SimpleGrid, Card, Stack,
+  ThemeIcon, AppShell, Burger, TextInput, Textarea, Box, ActionIcon, useMantineColorScheme
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { createClient } from '@supabase/supabase-js';
 
-// Self-contained secure backend database connection instance
+// Secure database connection client
 const supabase = createClient(
   'https://supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
@@ -19,8 +19,13 @@ export default function HomePage() {
   const [opened, { toggle }] = useDisclosure();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  
+  // 1. Hook to control dark/light mode toggle switches
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const form = useForm({
+    // enable validation while typing
     validateInputOnChange: true,
     initialValues: { name: '', email: '', message: '' },
     validate: {
@@ -30,7 +35,6 @@ export default function HomePage() {
     },
   });
 
-  // Handle saving the user message directly to the database backend
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
     setSuccess(false);
@@ -51,32 +55,45 @@ export default function HomePage() {
 
   return (
     <AppShell header={{ height: 60 }} navbar={{ width: 300, breakpoint: 'sm', collapsed: { desktop: true, mobile: !opened } }} padding="md">
+      {/* Global Header Bar */}
       <AppShell.Header>
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violetBrand.6', to: 'indigo.6' }}>MANTINE.io</Text>
+            
             <Group gap="xl" visibleFrom="sm">
               <Text component="a" href="#" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Features</Text>
               <Text component="a" href="#" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Pricing</Text>
               <Text component="a" href="#" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Contact</Text>
             </Group>
+
             <Group visibleFrom="sm">
+              {/* 2. Interactive Theme Toggle Switch Button */}
+              <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md" aria-label="Toggle color scheme">
+                {isDark ? '☀️' : '🌙'}
+              </ActionIcon>
               <Button variant="default">Log In</Button>
               <Button gradient={{ from: 'violetBrand.6', to: 'indigo.6' }} variant="gradient">Get Started</Button>
             </Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+
+            <Group hiddenFrom="sm">
+              <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md" mr="xs">
+                {isDark ? '☀️' : '🌙'}
+              </ActionIcon>
+              <Burger opened={opened} onClick={toggle} size="sm" />
+            </Group>
           </Group>
         </Container>
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+        <Stack style={{ width: '100%', gap: 16 }}>
           <Button variant="subtle" fullWidth color="gray">Features</Button>
           <Button variant="subtle" fullWidth color="gray">Pricing</Button>
           <Button variant="subtle" fullWidth color="gray">Contact</Button>
           <Button variant="default" fullWidth mt="md">Log In</Button>
           <Button gradient={{ from: 'violetBrand.6', to: 'indigo.6' }} variant="gradient" fullWidth>Get Started</Button>
-        </div>
+        </Stack>
       </AppShell.Navbar>
 
       <AppShell.Main pt={60}>
@@ -95,7 +112,7 @@ export default function HomePage() {
                 <Button size="lg" variant="outline" color="violetBrand.6">Book a live demo</Button>
               </Group>
             </div>
-            <div style={{ height: '380px', backgroundColor: 'var(--mantine-color-gray-1)', borderRadius: '24px', border: '1px dashed var(--mantine-color-gray-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ height: '380px', backgroundColor: isDark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-gray-1)', borderRadius: '24px', border: '1px dashed var(--mantine-color-gray-4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Text c="gray.5" fw={500}>[ Product Dashboard Mockup Preview ]</Text>
             </div>
           </SimpleGrid>
@@ -125,7 +142,7 @@ export default function HomePage() {
             </SimpleGrid>
           </div>
 
-          {/* Connected Contact Form */}
+          {/* Contact Form */}
           <div style={{ marginTop: '120px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>
               <Title order={2} size="32px" fw={800}>Get in Touch</Title>
@@ -148,7 +165,7 @@ export default function HomePage() {
           </div>
         </Container>
 
-        <Box style={{ borderTop: '1px solid var(--mantine-color-gray-2)', backgroundColor: 'var(--mantine-color-gray-0)' }} mt={100} py={40}>
+        <Box style={{ borderTop: '1px solid var(--mantine-color-gray-2)', backgroundColor: isDark ? 'var(--mantine-color-dark-7)' : 'var(--mantine-color-gray-0)' }} mt={100} py={40}>
           <Container size="lg">
             <Group justify="between">
               <Text size="sm" c="dimmed">© 2026 MANTINE.io. All rights reserved.</Text>
