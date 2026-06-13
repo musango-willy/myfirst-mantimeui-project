@@ -9,10 +9,20 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+// Force your code to bypass broken domain filters and connect directly to your cloud data node
 const supabase = createClient(
-  'https://supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
+  'https://104.21.51.216', // <-- REPLACE your project .co URL string with this direct proxy IP
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8',
+  {
+    global: {
+      headers: {
+        // Explicitly pass your project routing header signature key to verify the path
+        'Host': 'fpikcudhlkbynmyctrdp.supabase.co'
+      }
+    }
+  }
 );
+
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
