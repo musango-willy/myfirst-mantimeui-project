@@ -30,13 +30,14 @@ export default function AdminPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Pull items loosely without specifying hard id column rows to prevent crashes
       const msgsRes = await supabase.from('contact_messages').select('*');
       const prodsRes = await supabase.from('products').select('*');
       
       if (msgsRes.data) setMessages(msgsRes.data);
       if (prodsRes.data) setProducts(prodsRes.data);
     } catch (err) {
-      console.error("Dashboard failed to stream data:", err);
+      console.error("Dashboard stream failure:", err);
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       setLoginError('');
     } else {
-      setLoginError('Invalid credentials.');
+      setLoginError('Invalid administrative passphrase access credentials.');
     }
   };
 
@@ -57,12 +58,6 @@ export default function AdminPage() {
       fetchData();
     }
   }, [isAuthenticated]);
-
-  const handleDeleteProduct = async (id: any) => {
-    if (!confirm('Permanently delete this product from the master database?')) return;
-    await supabase.from('products').delete().eq('id', id);
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-  };
 
   if (!isAuthenticated) {
     return (
@@ -120,15 +115,14 @@ export default function AdminPage() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
                   {products.map((p, index) => (
-                    <Card key={p.id || index} withBorder padding="sm" radius="md">
+                    <Card key={index} withBorder padding="sm" radius="md">
                       <Group justify="between">
                         <div style={{ maxWidth: '65%' }}>
-                          <Text fw={600} size="sm" lineClamp={1}>{p.title || p.Name || 'Untitled Item'}</Text>
+                          <Text fw={600} size="sm" lineClamp={1}>{p.title || 'Untitled Item'}</Text>
                           <Text size="xs" c="dimmed" lineClamp={1}>{p.description || 'No description'}</Text>
                         </div>
                         <Group>
                           <Text fw={700} c="green.6" size="sm">${p.price || 0}</Text>
-                          <Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteProduct(p.id)}>Delete</Button>
                         </Group>
                       </Group>
                     </Card>
@@ -144,8 +138,8 @@ export default function AdminPage() {
                 <Text c="dimmed">No contact submissions found.</Text>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
-                  {messages.map((m) => (
-                    <Card key={m.id} withBorder padding="sm" radius="md">
+                  {messages.map((m, idx) => (
+                    <Card key={idx} withBorder padding="sm" radius="md">
                       <Text fw={600} size="sm">{m.name}</Text>
                       <Text size="xs" c="blue" mb="xs">{m.email}</Text>
                       <Text size="xs" c="gray.7" style={{ backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px' }}>{m.message}</Text>
