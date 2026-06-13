@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  Container, Title, Text, Button, Group, SimpleGrid, Card, 
+  Container, Title, Text, Button, Group, SimpleGrid, Card, Stack,
   AppShell, Burger, Box, ActionIcon, useMantineColorScheme 
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -16,10 +16,10 @@ const supabase = createClient(
 );
 
 interface ProductRow {
-  title: string;
-  price: number;
-  description: string;
-  image_url: string;
+  title?: string;
+  price?: number;
+  description?: string;
+  image_url?: string;
 }
 
 export default function HomePage() {
@@ -33,12 +33,12 @@ export default function HomePage() {
       try {
         const { data, error } = await supabase.from('products').select('*');
         if (error) {
-          console.error("Database fetch error:", error.message);
+          console.error("Database error:", error.message);
           return;
         }
         if (data) setProducts(data);
       } catch (err) {
-        console.error("Failed to fetch products:", err);
+        console.error("Fetch crashed:", err);
       }
     }
     loadProducts();
@@ -50,29 +50,26 @@ export default function HomePage() {
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>MANTINE.io</Text>
-            
             <Group gap="xl" visibleFrom="sm">
               <Text component="a" href="#" fw={500} size="sm" c="dimmed">Features</Text>
               <Text component="a" href="#catalog" fw={500} size="sm" c="dimmed">Products</Text>
             </Group>
-
             <Group visibleFrom="sm">
               <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">
                 {isDark ? '☀️' : '🌙'}
               </ActionIcon>
               <Button variant="default" component="a" href="/admin">Admin Panel</Button>
             </Group>
-            
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
           </Group>
         </Container>
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Stack gap="md" style={{ width: '100%' }}>
           <Button variant="subtle" fullWidth color="gray" component="a" href="#catalog">Products</Button>
           <Button variant="default" fullWidth component="a" href="/admin">Admin Panel</Button>
-        </Box>
+        </Stack>
       </AppShell.Navbar>
 
       <AppShell.Main pt={60}>
@@ -81,16 +78,7 @@ export default function HomePage() {
           {/* Hero Section */}
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={50} style={{ alignItems: 'center' }} mb="80px">
             <div>
-              <Title
-                size="calc(2rem + 1.5vw)"
-                fw={900}
-                lh={1.2}
-                style={{
-                  backgroundImage: 'linear-gradient(90deg, var(--mantine-color-violet-6), var(--mantine-color-indigo-6))',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                }}
-              >
+              <Title order={1} size="calc(2rem + 1.5vw)" fw={900} lh={1.2} style={{ backgroundImage: 'linear-gradient(90deg, var(--mantine-color-violet-6), var(--mantine-color-indigo-6))', WebkitBackgroundClip: 'text', color: 'transparent' }}>
                 Automate your workflow in a single click.
               </Title>
               <Text c="dimmed" size="lg" mt="xl">
@@ -102,14 +90,14 @@ export default function HomePage() {
             </Box>
           </SimpleGrid>
 
-          {/* Dynamic Product Catalog Section */}
+          {/* Catalog Section */}
           <Box id="catalog" style={{ marginTop: '80px' }}>
             <Box style={{ textAlign: 'center', marginBottom: '50px' }}>
               <Title order={2} size="32px" fw={800}>Explore Our Available Products</Title>
               <Text c="dimmed" mt="sm">Directly powered by our custom Postgres database catalog backend.</Text>
             </Box>
 
-            {!products || products.length === 0 ? (
+            {products.length === 0 ? (
               <Card padding="xl" radius="lg" withBorder style={{ textAlign: 'center' }}>
                 <Text c="dimmed">No products are currently active in our live catalog inventory store sheet.</Text>
               </Card>
@@ -117,18 +105,21 @@ export default function HomePage() {
               <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
                 {products.map((product, idx) => (
                   <Card key={idx} shadow="sm" padding="xl" radius="lg" withBorder style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <Box style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
+                    <Box style={{ width: '100%', height: '200px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', backgroundColor: '#eee' }}>
                       <img 
                         src={product.image_url || 'https://unsplash.com'} 
-                        alt={product.title} 
+                        alt={product.title || 'Product'} 
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://unsplash.com';
+                        }}
                       />
                     </Box>
                     <Group justify="between" mt="md" mb="xs">
-                      <Text fw={700} size="sm">{product.title}</Text>
-                      <Text fw={800} c="green.6" size="sm">${product.price}</Text>
+                      <Text fw={700} size="sm">{product.title || 'Untitled Product'}</Text>
+                      <Text fw={800} c="green.6" size="sm">${product.price || 0}</Text>
                     </Group>
-                    <Text size="xs" c="dimmed" mt="xs" style={{ flexGrow: 1 }}>{product.description}</Text>
+                    <Text size="xs" c="dimmed" mt="xs" style={{ flexGrow: 1 }}>{product.description || 'No description provided.'}</Text>
                     <Button fullWidth mt="xl" color="violet.6" radius="md">Buy Now</Button>
                   </Card>
                 ))}
