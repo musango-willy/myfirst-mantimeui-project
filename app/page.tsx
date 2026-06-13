@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  Container, Title, Text, Button, Group, Stack, SimpleGrid, Card, 
-  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, Badge, Drawer, Divider, TextInput, Textarea
+  Container, Title, Text, Button, Group, SimpleGrid, Card, Stack, Center,
+  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, Drawer, Divider, Badge, TextInput, Textarea
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
@@ -20,18 +20,21 @@ interface ProductRow { title: string; price: number; description: string; image_
 interface CartItem extends ProductRow { quantity: number; }
 
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false); // Safety mount tracker
   const [opened, { toggle }] = useDisclosure();
   const [cartOpened, { open: openCart, close: closeCart }] = useDisclosure(false);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
   const form = useForm({
-    initialValues: { name: '', email: '', message: '' },
+    // useForm from Mantine uses validateInputOnChange instead of react-hook-form's mode
     validateInputOnChange: true,
+    initialValues: { name: '', email: '', message: '' },
     validate: {
       name: (value) => (value.trim().length < 2 ? 'Name must have at least 2 characters' : null),
       email: (value) => (/^\S+@\S+\.\S+$/.test(value) ? null : 'Invalid email address format'),
@@ -40,13 +43,28 @@ export default function HomePage() {
   });
 
   useEffect(() => {
+    setMounted(true); // Force hydration compliance before executing theme logic
     async function loadProducts() {
-      // Pass the matching client security token inside your reading stream
       const { data } = await supabase.from('products').select('*');
       if (data) setProducts(data);
     }
     loadProducts();
   }, []);
+
+  const addToCart = (product: ProductRow) => {
+    setCart((prev) => {
+      const existing = prev.find((item) => item.title === product.title);
+      if (existing) {
+        return prev.map((item) => item.title === product.title ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    openCart();
+  };
+
+  const removeFromCart = (title: string) => {
+    setCart((prev) => prev.filter((item) => item.title !== title));
+  };
 
   const handleSubmit = async (values: typeof form.values) => {
     setLoading(true);
@@ -65,29 +83,17 @@ export default function HomePage() {
         form.reset();
       }
     } catch (err: any) {
-      alert('Connection block: ' + err.message);
+      alert('Network block: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const addToCart = (product: ProductRow) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.title === product.title);
-      if (existing) {
-        return prev.map((item) => item.title === product.title ? { ...item, quantity: item.quantity + 1 } : item);
-      }
-      return [...prev, { ...product, quantity: 1 }];
-    });
-    openCart();
-  };
-
-  const removeFromCart = (title: string) => {
-    setCart((prev) => prev.filter((item) => item.title !== title));
-  };
-
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Prevent compiling layout streams until client hydration finishes safely
+  if (!mounted) return null;
 
   return (
     <AppShell header={{ height: 60 }} navbar={{ width: 300, breakpoint: 'sm', collapsed: { desktop: true, mobile: !opened } }} padding="md">
@@ -95,14 +101,20 @@ export default function HomePage() {
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>MANTINE.io</Text>
+            
             <Group gap="xl" visibleFrom="sm">
               <Text component="a" href="#" fw={500} size="sm" c="dimmed">Features</Text>
               <Text component="a" href="#catalog" fw={500} size="sm" c="dimmed">Store Catalog</Text>
-              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Contact</Text>
+              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Get In Touch</Text>
             </Group>
+
             <Group visibleFrom="sm">
-              <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">{isDark ? '☀️' : '🌙'}</ActionIcon>
-              <Button onClick={openCart} variant="light" color="violet.6">🛒 Cart ({totalItems})</Button>
+              <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">
+                {isDark ? '☀️' : '🌙'}
+              </ActionIcon>
+              <Button onClick={openCart} variant="light" color="violet.6">
+                🛒 Cart ({totalItems})
+              </Button>
               <Button variant="default" component="a" href="/admin">Admin</Button>
             </Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
@@ -123,9 +135,18 @@ export default function HomePage() {
           {/* Marketplace Title */}
           <Box id="catalog" style={{ marginTop: '20px' }}>
             <Box style={{ textAlign: 'center', marginBottom: '50px' }}>
-              <Text component="h1" size="36px" fw={900} variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>
+              <Title
+                order={1}
+                size="36px"
+                fw={900}
+                style={{
+                  background: 'linear-gradient(90deg, #7c3aed, #4f46e5)',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
                 Assorted Multi-Category Marketplace
-              </Text>
+              </Title>
               <Text c="dimmed" mt="xs">Streamed live from our secure PostgreSQL database rows.</Text>
             </Box>
 
@@ -145,14 +166,16 @@ export default function HomePage() {
                       <Badge color="green" size="lg" variant="light">${product.price}</Badge>
                     </Group>
                     <Text size="xs" c="dimmed" style={{ flexGrow: 1 }} lineClamp={2}>{product.description}</Text>
-                    <Button fullWidth mt="xl" color="violet.6" radius="md" onClick={() => addToCart(product)}>Add to Cart</Button>
+                    <Button fullWidth mt="xl" color="violet.6" radius="md" onClick={() => addToCart(product)}>
+                      Add to Cart
+                    </Button>
                   </Card>
                 ))}
               </SimpleGrid>
             )}
           </Box>
 
-          {/* Connected Email Contact Form Box Section */}
+          {/* Form Section */}
           <Box id="contact" style={{ marginTop: '100px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
             <Box style={{ textAlign: 'center', marginBottom: '30px' }}>
               <Title order={2} size="32px" fw={800}>Get in Touch</Title>
@@ -164,7 +187,9 @@ export default function HomePage() {
                 <TextInput label="Your Name" placeholder="John Doe" required {...form.getInputProps('name')} disabled={loading} />
                 <TextInput label="Email Address" placeholder="hello@example.com" required mt="md" {...form.getInputProps('email')} disabled={loading} />
                 <Textarea label="Your Message" placeholder="Tell us about your project requirements..." required mt="md" minRows={4} {...form.getInputProps('message')} disabled={loading} />
+
                 {success && <Text c="green" size="sm" mt="sm" fw={500}>✓ Message sent successfully! Check your automated Resend email inbox logs.</Text>}
+
                 <Button type="submit" fullWidth mt="xl" size="md" color="violet.6" loading={loading}>
                   {loading ? 'Sending Email Routing...' : 'Send Message'}
                 </Button>
@@ -178,12 +203,10 @@ export default function HomePage() {
       <Drawer opened={cartOpened} onClose={closeCart} title="🛒 Your Shopping Cart" position="right" size="md" padding="xl">
         <Divider mb="xl" />
         {cart.length === 0 ? (
-          <Box style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Text c="dimmed">Your shopping cart layout is currently empty.</Text>
-          </Box>
+          <Center style={{ height: '200px' }}><Text c="dimmed">Your shopping cart layout is currently empty.</Text></Center>
         ) : (
           <Box style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 150px)', justifyContent: 'space-between' }}>
-            <Box style={{ overflowY: 'auto', flexGrow: 1, paddingRight: '4px' }}>
+            <Box style={{ overflowY: 'auto', flexGrow: 1 }}>
               {cart.map((item, index) => (
                 <Card key={index} withBorder mb="md" padding="sm" radius="md">
                   <Group justify="between">
@@ -193,21 +216,18 @@ export default function HomePage() {
                     </div>
                     <Group>
                       <Text fw={700} size="sm" c="violet.6">${item.price * item.quantity}</Text>
-                      <Button size="xs" variant="subtle" color="red" onClick={() => removeFromCart(item.title)}>✕</Button>
+                      <Button variant="subtle" size="xs" onClick={() => removeFromCart(item.title)}>Remove</Button>
                     </Group>
                   </Group>
                 </Card>
               ))}
             </Box>
-            <Box>
-              <Divider my="md" />
-              <Group justify="apart" align="center">
-                <Text fw={700}>Total</Text>
-                <Text fw={700}>${cartTotal.toFixed(2)}</Text>
+            <Box style={{ borderTop: '1px solid var(--mantine-color-gray-2)', paddingTop: '16px' }}>
+              <Group justify="between" mb="md">
+                <Text fw={700} size="lg">Total:</Text>
+                <Text fw={700} size="lg" c="violet.6">${cartTotal.toFixed(2)}</Text>
               </Group>
-              <Button fullWidth mt="md" color="violet.6" onClick={closeCart}>
-                Proceed to Checkout
-              </Button>
+              <Button fullWidth color="violet.6" size="md">Checkout</Button>
             </Box>
           </Box>
         )}
@@ -215,4 +235,3 @@ export default function HomePage() {
     </AppShell>
   );
 }
-
