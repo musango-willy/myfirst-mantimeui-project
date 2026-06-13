@@ -1,15 +1,14 @@
 "use client";
-// Force Next.js to fetch live database entries on every page request
-export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { 
-  Container, Title, Text, Table, Button, Group, Card, SimpleGrid,
+  Container, Title, Text, Button, Group, Card, SimpleGrid,
   Loader, Center, AppShell, ActionIcon, useMantineColorScheme, TextInput, NumberInput, Textarea
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { createClient } from '@supabase/supabase-js';
 
+// Secure database connection client matching your project cluster
 const supabase = createClient(
   'https://supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
@@ -23,10 +22,10 @@ export default function AdminPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingProduct, setAddingProduct] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Form handler for adding a new product listing
   const productForm = useForm({
     initialValues: { title: '', price: 29, description: '' },
     validate: {
@@ -54,7 +53,7 @@ export default function AdminPage() {
       alert('Failed to save product: ' + error.message);
     } else {
       productForm.reset();
-      fetchData(); // Refresh list automatically
+      fetchData();
     }
   };
 
@@ -63,6 +62,14 @@ export default function AdminPage() {
       await supabase.from('products').delete().eq('id', id);
       setProducts((prev) => prev.filter((p) => p.id !== id));
     }
+  };
+
+  const handleDeleteMessage = async (id: number) => {
+    if (!confirm('Permanently delete this message log?')) return;
+    setDeletingId(id);
+    await supabase.from('contact_messages').delete().eq('id', id);
+    setMessages((prev) => prev.filter((msg) => msg.id !== id));
+    setDeletingId(null);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -83,10 +90,10 @@ export default function AdminPage() {
 
       <AppShell.Main pt={80}>
         <Container size="lg">
-          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" mb="100px" style={{ alignItems: 'start' }}>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" mb="50px" style={{ alignItems: 'start' }}>
             {/* Left Column: Product Addition Form */}
             <Card padding="xl" radius="lg" withBorder shadow="sm">
-              <Title order={2} size="22px" mb="md" fw={800}>📦 Add New Product Listing</Title>
+              <Title order={2} size="20px" mb="md" fw={800}>📦 Add New Product Listing</Title>
               <form onSubmit={productForm.onSubmit(handleAddProduct)}>
                 <TextInput label="Product Name" placeholder="e.g. Wireless Headphones Pro" required {...productForm.getInputProps('title')} />
                 <NumberInput label="Price (USD)" placeholder="29" min={1} required mt="md" {...productForm.getInputProps('price')} />
@@ -99,45 +106,49 @@ export default function AdminPage() {
 
             {/* Right Column: Inventory Data Grid */}
             <Card padding="xl" radius="lg" withBorder shadow="sm">
-              <Title order={2} size="22px" mb="md" fw={800}>📂 Live Inventory Catalog</Title>
+              <Title order={2} size="20px" mb="md" fw={800}>📂 Live Inventory Catalog</Title>
               {products.length === 0 ? <Text c="dimmed" size="sm">No inventory records generated yet.</Text> : (
-                <Table highlightOnHover verticalSpacing="sm">
-                  <Table.Thead>
-                    <Table.Tr><Table.Th>Product</Table.Th><Table.Th style={{ width: '80px' }}>Price</Table.Th><Table.Th style={{ width: '80px' }}>Action</Table.Th></Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {products.map((p) => (
-                      <Table.Tr key={p.id}>
-                        <Table.Td><Text fw={600} size="sm">{p.title}</Text><Text size="xs" c="dimmed" lineClamp={1}>{p.description}</Text></Table.Td>
-                        <Table.Td fw={700} c="green.6">${p.price}</Table.Td>
-                        <Table.Td><Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteProduct(p.id)}>Delete</Button></Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {products.map((p) => (
+                    <Card key={p.id} withBorder padding="sm" radius="md" style={{ backgroundColor: isDark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-gray-0)' }}>
+                      <Group justify="between">
+                        <div style={{ maxWidth: '70%' }}>
+                          <Text fw={600} size="sm">{p.title}</Text>
+                          <Text size="xs" c="dimmed" lineClamp={1}>{p.description}</Text>
+                        </div>
+                        <Group>
+                          <Text fw={700} c="green.6" size="sm">${p.price}</Text>
+                          <Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteProduct(p.id)}>Delete</Button>
+                        </Group>
+                      </Group>
+                    </Card>
+                  ))}
+                </div>
               )}
             </Card>
           </SimpleGrid>
 
-          {/* Customer Leads Log Section at the Bottom */}
-          <Title order={2} size="24px" mb="md" fw={800}>✉️ Customer Leads Log</Title>
-          {loading ? <Loader size="sm" /> : (
-            <Card padding={0} radius="lg" withBorder shadow="xs" style={{ overflow: 'hidden' }}>
-              <Table highlightOnHover verticalSpacing="md" horizontalSpacing="lg">
-                <Table.Thead style={{ backgroundColor: isDark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-gray-0)' }}>
-                  <Table.Tr><Table.Th>Sender</Table.Th><Table.Th>Email Address</Table.Th><Table.Th>Inquiry Content Message</Table.Th></Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {messages.map((msg) => (
-                    <Table.Tr key={msg.id}>
-                      <Table.Td fw={600}>{msg.name}</Table.Td>
-                      <Table.Td c="blue">{msg.email}</Table.Td>
-                      <Table.Td>{msg.message}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Card>
+          {/* Customer Leads Log Section */}
+          <Title order={2} size="22px" mb="md" fw={800}>✉️ Customer Leads Log</Title>
+          {loading ? <Center py="xl"><Loader size="sm" /></Center> : messages.length === 0 ? (
+            <Text c="dimmed" size="sm">No custom submissions found.</Text>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {messages.map((msg) => (
+                <Card key={msg.id} padding="xl" radius="lg" withBorder shadow="xs">
+                  <Group justify="between" mb="xs">
+                    <div>
+                      <Text fw={700} size="sm">{msg.name}</Text>
+                      <Text size="xs" c="blue">{msg.email}</Text>
+                    </div>
+                    <Button size="xs" color="red" variant="light" radius="md" loading={deletingId === msg.id} onClick={() => handleDeleteMessage(msg.id)}>
+                      Delete Message
+                    </Button>
+                  </Group>
+                  <Text size="sm" style={{ whiteSpace: 'pre-wrap' }} c="gray.7">{msg.message}</Text>
+                </Card>
+              ))}
+            </div>
           )}
         </Container>
       </AppShell.Main>
