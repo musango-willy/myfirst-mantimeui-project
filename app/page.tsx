@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  Container, Title, Text, Button, Group, Stack, SimpleGrid, Card, 
+  Container, Title, Text, Button, Group, SimpleGrid, Card, 
   AppShell, Burger, Box, ActionIcon, useMantineColorScheme 
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
@@ -36,9 +36,7 @@ export default function HomePage() {
           console.error("Database fetch error:", error.message);
           return;
         }
-        if (data) {
-          setProducts(data);
-        }
+        if (data) setProducts(data);
       } catch (err) {
         console.error("Failed to fetch products:", err);
       }
@@ -51,7 +49,7 @@ export default function HomePage() {
       <AppShell.Header>
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
-            <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violetBrand.6', to: 'indigo.6' }}>MANTINE.io</Text>
+            <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>MANTINE.io</Text>
             
             <Group gap="xl" visibleFrom="sm">
               <Text component="a" href="#" fw={500} size="sm" c="dimmed">Features</Text>
@@ -71,10 +69,10 @@ export default function HomePage() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <Stack gap="md" style={{ width: '100%' }}>
+        <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Button variant="subtle" fullWidth color="gray" component="a" href="#catalog">Products</Button>
           <Button variant="default" fullWidth component="a" href="/admin">Admin Panel</Button>
-        </Stack>
+        </Box>
       </AppShell.Navbar>
 
       <AppShell.Main pt={60}>
@@ -83,9 +81,18 @@ export default function HomePage() {
           {/* Hero Section */}
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={50} style={{ alignItems: 'center' }} mb="80px">
             <div>
-              <Text component="h1" size="calc(2rem + 1.5vw)" fw={900} lh={1.2} variant="gradient" gradient={{ from: 'violetBrand.6', to: 'indigo.6', deg: 90 }}>
+              <Title
+                size="calc(2rem + 1.5vw)"
+                fw={900}
+                lh={1.2}
+                style={{
+                  backgroundImage: 'linear-gradient(90deg, var(--mantine-color-violet-6), var(--mantine-color-indigo-6))',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
                 Automate your workflow in a single click.
-              </Text>
+              </Title>
               <Text c="dimmed" size="lg" mt="xl">
                 Stop wasting hours on manual data entry. Our platform connects your favorite software pipeline seamlessly so you can focus on building your actual product.
               </Text>
@@ -118,11 +125,11 @@ export default function HomePage() {
                       />
                     </Box>
                     <Group justify="between" mt="md" mb="xs">
-                      <Text fw={700} size="lg">{product.title}</Text>
-                      <Text fw={800} c="green.6" size="lg">${product.price}</Text>
+                      <Text fw={700} size="sm">{product.title}</Text>
+                      <Text fw={800} c="green.6" size="sm">${product.price}</Text>
                     </Group>
-                    <Text size="sm" c="dimmed" mt="xs" style={{ flexGrow: 1 }}>{product.description}</Text>
-                    <Button fullWidth mt="xl" color="violetBrand.6" radius="md">Buy Now</Button>
+                    <Text size="xs" c="dimmed" mt="xs" style={{ flexGrow: 1 }}>{product.description}</Text>
+                    <Button fullWidth mt="xl" color="violet.6" radius="md">Buy Now</Button>
                   </Card>
                 ))}
               </SimpleGrid>
