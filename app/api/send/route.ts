@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     // Fire the data packet directly into your personal email inbox
     const { data, error } = await resend.emails.send({
       from: 'onboarding@resend.dev', // Default developer sandbox verification sender domain
-      to: 'your-personal-email@gmail.com', // <-- REPLACE THIS with your actual email address!
+      to: 'musangowilly@gmail.com', // <-- REPLACE THIS with your actual email address!
       subject: `✉️ New Lead: Message from ${name}`,
       html: `
         <h3>New Contact Form Submission</h3>
