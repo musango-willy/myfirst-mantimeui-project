@@ -11,31 +11,27 @@ export const dynamic = 'force-dynamic';
 
 const supabase = createClient(
   'https://supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImZub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
-
-interface MessageRow { id: number; name: string; email: string; message: string; created_at: string; }
-interface ProductRow { id: number; title: string; price: number; description: string; image_url: string; }
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [messages, setMessages] = useState<MessageRow[]>([]);
-  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
   const MASTER_ADMIN_PASS = 'willy_secure_admin_pass_2026';
 
-  // Sequenced function to fetch live items from database
   const fetchData = async () => {
     setLoading(true);
     try {
-      const msgsRes = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-      const prodsRes = await supabase.from('products').select('*').order('id', { ascending: true });
+      const msgsRes = await supabase.from('contact_messages').select('*');
+      const prodsRes = await supabase.from('products').select('*');
       
       if (msgsRes.data) setMessages(msgsRes.data);
       if (prodsRes.data) setProducts(prodsRes.data);
@@ -52,29 +48,20 @@ export default function AdminPage() {
       setIsAuthenticated(true);
       setLoginError('');
     } else {
-      setLoginError('Invalid access credentials.');
+      setLoginError('Invalid credentials.');
     }
   };
 
-  // TRIGGER FETCH ONLY AFTER AUTHENTICATION BECOMES TRUE
   useEffect(() => {
     if (isAuthenticated) {
       fetchData();
     }
   }, [isAuthenticated]);
 
-  const handleDeleteProduct = async (id: number) => {
+  const handleDeleteProduct = async (id: any) => {
     if (!confirm('Permanently delete this product from the master database?')) return;
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else setProducts((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleDeleteMessage = async (id: number) => {
-    if (!confirm('Permanently delete this message log?')) return;
-    const { error } = await supabase.from('contact_messages').delete().eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else setMessages((prev) => prev.filter((m) => m.id !== id));
+    await supabase.from('products').delete().eq('id', id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   if (!isAuthenticated) {
@@ -132,15 +119,15 @@ export default function AdminPage() {
                 <Text c="dimmed" size="sm">No inventory records found.</Text>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
-                  {products.map((p) => (
-                    <Card key={p.id} withBorder padding="sm" radius="md">
+                  {products.map((p, index) => (
+                    <Card key={p.id || index} withBorder padding="sm" radius="md">
                       <Group justify="between">
                         <div style={{ maxWidth: '65%' }}>
-                          <Text fw={600} size="sm" lineClamp={1}>{p.title}</Text>
-                          <Text size="xs" c="dimmed" lineClamp={1}>{p.description}</Text>
+                          <Text fw={600} size="sm" lineClamp={1}>{p.title || p.Name || 'Untitled Item'}</Text>
+                          <Text size="xs" c="dimmed" lineClamp={1}>{p.description || 'No description'}</Text>
                         </div>
                         <Group>
-                          <Text fw={700} c="green.6" size="sm">${p.price}</Text>
+                          <Text fw={700} c="green.6" size="sm">${p.price || 0}</Text>
                           <Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteProduct(p.id)}>Delete</Button>
                         </Group>
                       </Group>
@@ -159,14 +146,9 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
                   {messages.map((m) => (
                     <Card key={m.id} withBorder padding="sm" radius="md">
-                      <Group justify="between" align="center" mb="xs">
-                        <div>
-                          <Text fw={600} size="sm">{m.name}</Text>
-                          <Text size="xs" c="blue">{m.email}</Text>
-                        </div>
-                        <Button size="xs" color="red" variant="light" onClick={() => handleDeleteMessage(m.id)}>Clear</Button>
-                      </Group>
-                      <Text size="xs" c="gray.7" style={{ backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>{m.message}</Text>
+                      <Text fw={600} size="sm">{m.name}</Text>
+                      <Text size="xs" c="blue" mb="xs">{m.email}</Text>
+                      <Text size="xs" c="gray.7" style={{ backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px' }}>{m.message}</Text>
                     </Card>
                   ))}
                 </div>
