@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const supabase = createClient(
   'https://supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImZub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
 interface MessageRow { id: number; name: string; email: string; message: string; created_at: string; }
@@ -24,23 +24,13 @@ export default function AdminPage() {
 
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
   const MASTER_ADMIN_PASS = 'willy_secure_admin_pass_2026';
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === MASTER_ADMIN_PASS) {
-      setIsAuthenticated(true);
-      setLoginError('');
-      fetchData();
-    } else {
-      setLoginError('Invalid access credentials.');
-    }
-  };
-
+  // Sequenced function to fetch live items from database
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -56,20 +46,35 @@ export default function AdminPage() {
     }
   };
 
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === MASTER_ADMIN_PASS) {
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Invalid access credentials.');
+    }
+  };
+
+  // TRIGGER FETCH ONLY AFTER AUTHENTICATION BECOMES TRUE
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
+
   const handleDeleteProduct = async (id: number) => {
     if (!confirm('Permanently delete this product from the master database?')) return;
-    
-    // Inject the administrative security token key inside headers to pass postgres checks
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) alert('Error: ' + error.message);
+    else setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
 
-    if (error) {
-      alert('Security block: ' + error.message);
-    } else {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    }
+  const handleDeleteMessage = async (id: number) => {
+    if (!confirm('Permanently delete this message log?')) return;
+    const { error } = await supabase.from('contact_messages').delete().eq('id', id);
+    if (error) alert('Error: ' + error.message);
+    else setMessages((prev) => prev.filter((m) => m.id !== id));
   };
 
   if (!isAuthenticated) {
@@ -109,6 +114,7 @@ export default function AdminPage() {
             </Group>
             <Group>
               <Button variant="subtle" size="sm" component="a" href="/">Back to Site</Button>
+              <Button variant="outline" size="sm" onClick={fetchData} loading={loading}>Refresh Data</Button>
               <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">{isDark ? '☀️' : '🌙'}</ActionIcon>
             </Group>
           </Group>
@@ -123,7 +129,7 @@ export default function AdminPage() {
             <Card padding="xl" radius="lg" withBorder shadow="sm">
               <Title order={2} size="20px" mb="md" fw={800}>📂 Live Inventory Catalog ({products.length})</Title>
               {loading ? <Center py="xl"><Loader size="sm" /></Center> : products.length === 0 ? (
-                <Text c="dimmed" size="sm">No inventory records generated yet.</Text>
+                <Text c="dimmed" size="sm">No inventory records found.</Text>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
                   {products.map((p) => (
@@ -150,12 +156,17 @@ export default function AdminPage() {
               {loading ? <Center py="xl"><Loader size="sm" /></Center> : messages.length === 0 ? (
                 <Text c="dimmed">No contact submissions found.</Text>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
                   {messages.map((m) => (
                     <Card key={m.id} withBorder padding="sm" radius="md">
-                      <Text fw={600} size="sm">{m.name}</Text>
-                      <Text size="xs" c="blue" mb="xs">{m.email}</Text>
-                      <Text size="xs" c="gray.7" style={{ backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px' }}>{m.message}</Text>
+                      <Group justify="between" align="center" mb="xs">
+                        <div>
+                          <Text fw={600} size="sm">{m.name}</Text>
+                          <Text size="xs" c="blue">{m.email}</Text>
+                        </div>
+                        <Button size="xs" color="red" variant="light" onClick={() => handleDeleteMessage(m.id)}>Clear</Button>
+                      </Group>
+                      <Text size="xs" c="gray.7" style={{ backgroundColor: '#f8f9fa', padding: '6px', borderRadius: '4px', whiteSpace: 'pre-wrap' }}>{m.message}</Text>
                     </Card>
                   ))}
                 </div>
