@@ -1,14 +1,16 @@
 "use client";
-export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
-  Container, Title, Text, Button, Group, Stack, SimpleGrid, Card, 
-  ThemeIcon, AppShell, Burger, TextInput, Textarea, Box, ActionIcon, List, useMantineColorScheme
+  Container, Title, Text, Button, Group, SimpleGrid, Card, Image,
+  ThemeIcon, AppShell, Burger, TextInput, Textarea, Box, ActionIcon, useMantineColorScheme, Loader, Center
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { createClient } from '@supabase/supabase-js';
+
+// Force Next.js to skip caching and fetch live entries on every page view
+export const dynamic = 'force-dynamic';
 
 // Secure database connection client
 const supabase = createClient(
@@ -16,14 +18,43 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
+interface ProductRow {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+  image_url: string;
+}
+
 export default function HomePage() {
   const [opened, { toggle }] = useDisclosure();
   const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [products, setProducts] = useState<ProductRow[]>([]);
   
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // 1. Fetch live products from Supabase
+  const fetchProducts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      setProducts(data);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // Contact Form configuration
   const form = useForm({
     validateInputOnChange: true,
     initialValues: { name: '', email: '', message: '' },
@@ -35,14 +66,14 @@ export default function HomePage() {
   });
 
   const handleSubmit = async (values: typeof form.values) => {
-    setLoading(true);
+    setFormLoading(true);
     setSuccess(false);
 
     const { error } = await supabase
       .from('contact_messages')
       .insert([{ name: values.name, email: values.email, message: values.message }]);
 
-    setLoading(false);
+    setFormLoading(false);
 
     if (error) {
       alert('Failed to send message: ' + error.message);
@@ -61,10 +92,10 @@ export default function HomePage() {
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violetBrand.6', to: 'indigo.6' }}>MANTINE.io</Text>
             
             <Group gap="xl" visibleFrom="sm">
-              <Text component="a" href="#" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Features</Text>
+              <Text component="a" href="#features" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Features</Text>
+              <Text component="a" href="#products" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Products</Text>
               <Text component="a" href="#pricing" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Pricing</Text>
               <Text component="a" href="#contact" fw={500} size="sm" c="dimmed" style={{ cursor: 'pointer' }}>Contact</Text>
-              <Button size="xs" variant="light" color="blue" component="a" href="/admin">Admin Log</Button>
             </Group>
 
             <Group visibleFrom="sm">
@@ -86,18 +117,19 @@ export default function HomePage() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <Stack gap="md" style={{ width: '100%' }}>
-          <Button variant="subtle" fullWidth color="gray">Features</Button>
-          <Button variant="subtle" fullWidth color="gray" component="a" href="#pricing" onClick={toggle}>Pricing</Button>
-          <Button variant="subtle" fullWidth color="gray" component="a" href="#contact" onClick={toggle}>Contact</Button>
-          <Button variant="light" fullWidth color="blue" component="a" href="/admin">Admin Panel</Button>
+        <Box style={{ width: '100%', display: 'grid', gap: '16px' }}>
+          <Button variant="subtle" fullWidth color="gray" component="a" href="#features">Features</Button>
+          <Button variant="subtle" fullWidth color="gray" component="a" href="#products">Products</Button>
+          <Button variant="subtle" fullWidth color="gray" component="a" href="#pricing">Pricing</Button>
+          <Button variant="subtle" fullWidth color="gray" component="a" href="#contact">Contact</Button>
           <Button variant="default" fullWidth mt="md">Log In</Button>
           <Button gradient={{ from: 'violetBrand.6', to: 'indigo.6' }} variant="gradient" fullWidth>Get Started</Button>
-        </Stack>
+        </Box>
       </AppShell.Navbar>
 
       <AppShell.Main pt={60}>
         <Container size="lg" py={60}>
+          
           {/* Hero Section */}
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing={50} style={{ alignItems: 'center' }}>
             <div>
@@ -107,9 +139,9 @@ export default function HomePage() {
                 fw={900}
                 lh={1.2}
                 style={{
-                  backgroundImage: 'linear-gradient(90deg, var(--mantine-color-violetBrand-6), var(--mantine-color-indigo-6))',
+                  background: 'linear-gradient(90deg, #7C3AED, #4F46E5)',
                   WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: 'transparent',
                 }}
               >
                 Automate your workflow in a single click.
@@ -127,9 +159,9 @@ export default function HomePage() {
             </div>
           </SimpleGrid>
 
-          {/* Features Grid */}
-          <div style={{ marginTop: '120px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          {/* Features Grid Section */}
+          <div id="features" style={{ marginTop: '120px' }}>
+            <div style={{ marginBottom: '50px', textAlign: 'center' }}>
               <Title order={2} size="32px" fw={800}>Everything you need to scale</Title>
               <Text c="dimmed" mt="sm" maw={600} mx="auto">Our platform includes all the enterprise-ready infrastructure integrations out of the box.</Text>
             </div>
@@ -152,49 +184,38 @@ export default function HomePage() {
             </SimpleGrid>
           </div>
 
-          {/* Polished Pricing Section Grid */}
-          <div id="pricing" style={{ marginTop: '120px' }}>
+          {/* NEW FEATURE: Dynamic Products Catalog Section */}
+          <div id="products" style={{ marginTop: '120px' }}>
             <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-              <Title order={2} size="32px" fw={800}>Simple, predictable pricing</Title>
-              <Text c="dimmed" mt="sm">All plans come with a 14-day trial. No credit card required.</Text>
+              <Title order={2} size="32px" fw={800}>Explore Our Available Products</Title>
+              <Text c="dimmed" mt="sm" maw={600} mx="auto">Directly powered by our custom Postgres database catalog backend.</Text>
             </div>
 
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" maw={800} mx="auto">
-              {/* Starter Plan */}
-              <Card shadow="sm" padding="xl" withBorder>
-                <Text size="xs" tt="uppercase" fw={700} c="dimmed">Starter</Text>
-                <Group align="flex-end" gap="xs" mt="xs">
-                  <Title order={3} size="42px" lh={1}>$19</Title>
-                  <Text c="dimmed" size="sm" pb="xs">/ month</Text>
-                </Group>
-                <Text size="sm" c="dimmed" mt="md">Perfect for freelancers and side projects getting off the ground.</Text>
-                <div style={{ marginTop: '24px', marginBottom: '24px' }}>
-                  <Text size="sm" mt="xs">✓ Up to 5 active workflows</Text>
-                  <Text size="sm" mt="xs">✓ Standard 15-minute sync intervals</Text>
-                  <Text size="sm" mt="xs">✓ Email support assistance</Text>
-                </div>
-                <Button variant="outline" color="violetBrand.6" fullWidth>Choose Starter</Button>
+            {loading ? (
+              <Center py="xl"><Group gap="xs"><Loader size="sm" /><Text c="dimmed" size="sm">Loading catalog items...</Text></Group></Center>
+            ) : products.length === 0 ? (
+              <Card padding="xl" radius="lg" withBorder shadow="sm" style={{ textAlign: 'center' }}>
+                <Text c="dimmed">No products are currently active in our live catalog inventory store sheet.</Text>
               </Card>
-
-              {/* Pro Plan */}
-              <Card shadow="md" padding="xl" withBorder style={{ borderColor: 'var(--mantine-color-violetBrand-6)' }}>
-                <Text size="xs" tt="uppercase" fw={700} c="violetBrand.6">Pro</Text>
-                <Group align="flex-end" gap="xs" mt="xs">
-                  <Title order={3} size="42px" lh={1}>$49</Title>
-                  <Text c="dimmed" size="sm" pb="xs">/ month</Text>
-                </Group>
-                <Text size="sm" c="dimmed" mt="md">Best configuration for growing businesses and startup environments.</Text>
-                <div style={{ marginTop: '24px', marginBottom: '24px' }}>
-                  <Text size="sm" mt="xs" fw={500}>✓ Unlimited active workflows</Text>
-                  <Text size="sm" mt="xs" fw={500}>✓ Instant real-time synchronization</Text>
-                  <Text size="sm" mt="xs" fw={500}>✓ Priority 24/7 Slack support</Text>
-                </div>
-                <Button gradient={{ from: 'violetBrand.6', to: 'indigo.6' }} variant="gradient" fullWidth>Choose Pro</Button>
-              </Card>
-            </SimpleGrid>
+            ) : (
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
+                {products.map((p) => (
+                  <Card key={p.id} shadow="sm" padding="md" radius="lg" withBorder style={{ display: 'flex', flexDirection: 'column', justifyContent: 'between' }}>
+                    <Card.Section>
+                      <Image 
+                        src={p.image_url || 'https://unsplash.com'} 
+                        height={200} 
+                        alt={p.title} 
+                      />
+                    </Card.Section>
+                  </Card>
+                ))}
+              </SimpleGrid>
+            )}
           </div>
         </Container>
       </AppShell.Main>
     </AppShell>
   );
 }
+                    
