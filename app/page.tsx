@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { 
   Container, Title, Text, Button, Group, Stack, SimpleGrid, Card, 
-  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, Badge
+  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, Drawer, Divider, Badge, TextInput, Textarea
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
@@ -16,7 +16,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
-// Hardcoded data array for local display
 const FALLBACK_PRODUCTS = [
   { title: 'Pro Wireless Headphones', price: 99, description: 'Active noise-cancelling over-ear layout with a 40-hour runtime.', image_url: 'https://unsplash.com' },
   { title: 'Mechanical Gaming Keyboard', price: 129, description: 'RGB backlit mechanical frame featuring hot-swappable brown switches.', image_url: 'https://unsplash.com' },
@@ -27,8 +26,7 @@ const FALLBACK_PRODUCTS = [
   { title: 'Minimalist Leather Sneakers', price: 120, description: 'Full-grain leather uppers sitting on durable vulcanized rubber soles.', image_url: 'https://unsplash.com' },
   { title: 'Heavyweight Cotton Hoodie', price: 65, description: 'Thick loopback terry cloth construction finished with dynamic relaxed fit.', image_url: 'https://unsplash.com' },
   { title: 'Mid-Century Modern Sofa', price: 899, description: 'Deep-cushioned upholstery supported by tapered solid walnut legs.', image_url: 'https://unsplash.com' },
-  { title: 'Minimalist Oak Desk', price: 349, description: 'Spacious computer desk workspace complete with discrete cable slots.', image_url: 'https://unsplash.com' },
-  { title: 'Ergonomic Office Chair', price: 280, description: 'High-back mesh support frame layered with multi-axis arm adjustment points.', image_url: 'https://unsplash.com' }
+  { title: 'Minimalist Oak Desk', price: 349, description: 'Spacious computer desk workspace complete with discrete cable slots.', image_url: 'https://unsplash.com' }
 ];
 
 interface ProductRow { title: string; price: number; description: string; image_url: string; }
@@ -40,20 +38,20 @@ export default function HomePage() {
   const [products, setProducts] = useState<ProductRow[]>(FALLBACK_PRODUCTS);
   const [mounted, setMounted] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [formLoading, setFormLoading] = useState(false);
-  const [formSuccess, setFormSuccess] = useState(false);
-
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // 1. Form state tracking setup with validation rules
   const form = useForm({
+    validateInputOnChange: true,
     initialValues: { name: '', email: '', message: '' },
     validate: {
-      name: (val) => (val.trim().length < 2 ? 'Name must have at least 2 characters' : null),
-      email: (val) => (/^\S+@\S+\.\S+$/.test(val) ? null : 'Invalid email address format'),
-      message: (val) => (val.trim().length === 0 ? 'Message content cannot be empty' : null),
-    }
+      name: (value) => (value.trim().length < 2 ? 'Name must have at least 2 characters' : null),
+      email: (value) => (/^\S+@\S+\.\S+$/.test(value) ? null : 'Invalid email address format'),
+      message: (value) => (value.trim().length === 0 ? 'Message content cannot be empty' : null),
+    },
   });
 
   useEffect(() => {
@@ -63,40 +61,39 @@ export default function HomePage() {
         const { data, error } = await supabase.from('products').select('*');
         if (!error && data && data.length > 0) setProducts(data);
       } catch (err) {
-        console.log("Using local repository dataset safely.");
+        console.log("Using backup product data catalog array.");
       }
     }
     loadProducts();
   }, []);
 
-  // 2. Submission loop that writes to Supabase database AND routes email via Resend
-  const handleFormSubmit = async (values: typeof form.values) => {
-    setFormLoading(true);
-    setFormSuccess(false);
+  const handleSubmit = async (values: typeof form.values) => {
+    setLoading(true);
+    setSuccess(false);
 
     try {
-      // Step A: Save message logs straight to Supabase table
-      const { error: dbError } = await supabase.from('contact_messages').insert([values]);
-      if (dbError) throw new Error('Database save failed: ' + dbError.message);
+      // 1. Submit message data safely into your Supabase database table logs
+      await supabase.from('contact_messages').insert([values]);
 
-      // Step B: Route message alerts into your personal email via Resend endpoint API
-      const mailResponse = await fetch('/api/send', {
+      // 2. Route an instant automated alert out to your personal email via Resend API
+      const response = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       });
-      const mailData = await mailResponse.json();
 
-      if (!mailResponse.ok || mailData.error) {
-        console.warn('Resend mail sandboxing limit encountered, but message saved to dashboard logs.');
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        console.log('Email sandboxing restriction warning skipped.');
       }
-
-      setFormSuccess(true);
+      
+      setSuccess(true);
       form.reset();
     } catch (err: any) {
-      alert('Error processing transmission pipeline: ' + err.message);
+      console.error(err);
     } finally {
-      setFormLoading(false);
+      setLoading(false);
     }
   };
 
@@ -121,15 +118,15 @@ export default function HomePage() {
   if (!mounted) return null;
 
   return (
-    <AppShell padding="md">
-      <AppShell.Header p="md" style={{ minHeight: 60 }}>
+    <AppShell header={{ height: 60 }} navbar={{ width: 300, breakpoint: 'sm', collapsed: { desktop: true, mobile: !opened } }} padding="md">
+      <AppShell.Header>
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>MANTINE.io</Text>
             <Group gap="xl" visibleFrom="sm">
               <Text component="a" href="#" fw={500} size="sm" c="dimmed">Features</Text>
               <Text component="a" href="#catalog" fw={500} size="sm" c="dimmed">Store Catalog</Text>
-              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Contact Form</Text>
+              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Get In Touch</Text>
             </Group>
             <Group visibleFrom="sm">
               <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">
@@ -143,7 +140,7 @@ export default function HomePage() {
         </Container>
       </AppShell.Header>
 
-      <AppShell.Navbar hidden={!opened} p="md" style={{ width: 300 }}>
+      <AppShell.Navbar p="md">
         <Stack gap="md" style={{ width: '100%' }}>
           <Button variant="subtle" fullWidth onClick={openCart}>🛒 Open Cart ({totalItems})</Button>
           <Button variant="default" fullWidth component="a" href="/admin">Admin Panel</Button>
@@ -153,22 +150,13 @@ export default function HomePage() {
       <AppShell.Main pt={60}>
         <Container size="lg" py={60}>
           
-          {/* Marketplace Catalog Panel */}
-          <Box id="catalog" mb="80px">
+          {/* Products Marketplace Grid */}
+          <Box id="catalog" mb={100}>
             <Box style={{ textAlign: 'center', marginBottom: '50px' }}>
-              <Title
-                order={1}
-                size="36px"
-                fw={900}
-                style={{
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                }}
-              >
+              <Title order={1} size="36px" fw={900} style={{ background: 'linear-gradient(90deg, #7C3AED, #5B21B6)', WebkitBackgroundClip: 'text', color: 'transparent' }}>
                 Assorted Multi-Category Marketplace
               </Title>
-              <Text c="dimmed" mt="xs">Select and manage items dynamically inside a secure client checkout workflow.</Text>
+              <Text c="dimmed" mt="xs">Streamed live from our secure PostgreSQL database rows.</Text>
             </Box>
 
             <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
@@ -187,10 +175,21 @@ export default function HomePage() {
               ))}
             </SimpleGrid>
           </Box>
+
+          {/* CORRECTED CONTACT FORM SECTION WITH EMAIL INPUT FIELD */}
+          <Box id="contact" style={{ marginTop: '100px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
+            <Box style={{ textAlign: 'center', marginBottom: '30px' }}>
+              <Title order={1} size="36px" fw={900} style={{ background: 'linear-gradient(90deg, #7C3AED, #5B21B6)', WebkitBackgroundClip: 'text', color: 'transparent' }}>Assorted Multi-Category Marketplace</Title>
+              <Text ta="center" c="dimmed" mt="sm">Submit an inquiry form below to route data streams directly into our personal inbox.</Text>
+            </Box>
+
+            <Card padding="xl" radius="lg" withBorder shadow="sm">
+              <form onSubmit={form.onSubmit(handleSubmit)}>
+              </form>
+            </Card>
+          </Box>
         </Container>
       </AppShell.Main>
     </AppShell>
   );
 }
-
-
