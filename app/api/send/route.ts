@@ -1,17 +1,26 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 
-// Initialize the secure email engine client layer
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Set up the internal database client connection
+const supabase = createClient(
+  'https://supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
+);
 
 export async function POST(request: Request) {
   try {
     const { name, email, message } = await request.json();
 
-    // Fire the data packet directly into your personal email inbox
+    // 1. SAVE BACKUP LOG DIRECTLY TO SUPABASE POSTGRES TABLE ROWS
+    await supabase.from('contact_messages').insert([{ name, email, message }]);
+
+    // 2. ROUTE THE EMAIL INSTANTLY TO YOUR PERSONAL INBOX VIA RESEND
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Default developer sandbox verification sender domain
-      to: 'musangowilly@gmail.com', // <-- REPLACE THIS with your actual email address!
+      from: 'onboarding@resend.dev',
+      to: 'musangowilly@gmail.com',
       subject: `✉️ New Lead: Message from ${name}`,
       html: `
         <h3>New Contact Form Submission</h3>
