@@ -14,7 +14,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
-// Fallback data arrays for your product catalog inventory display
 const FALLBACK_PRODUCTS = [
   { id: 1, title: 'Pro Wireless Headphones', price: 99, description: 'Active noise-cancelling over-ear layout runtime.' },
   { id: 2, title: 'Mechanical Gaming Keyboard', price: 129, description: 'RGB backlit mechanical frame brown switches.' },
@@ -48,8 +47,7 @@ export default function AdminPage() {
   const fetchLeadsData = async () => {
     setLoading(true);
     try {
-      // Fetch incoming customer text message forms straight from your Supabase cluster
-      const { data, error } = await supabase.from('contact_messages').select('*').order('id', { ascending: false });
+      const { data, error } = await supabase.from('contact_messages').select('*');
       if (!error && data) {
         setMessages(data);
       }
@@ -60,15 +58,14 @@ export default function AdminPage() {
     }
   };
 
-  // Automatically load customer text entries the split-second the gate is unlocked
   useEffect(() => {
     if (isAuthenticated) {
       fetchLeadsData();
     }
   }, [isAuthenticated]);
 
-  const handleDeleteMessage = async (id: number) => {
-    if (!confirm('Are you absolutely sure you want to permanently delete this customer lead message?')) return;
+  const handleDeleteMessage = async (id: any) => {
+    if (!confirm('Permanently delete this customer lead message?')) return;
     const { error } = await supabase.from('contact_messages').delete().eq('id', id);
     if (error) {
       alert('Failed to delete: ' + error.message);
@@ -129,8 +126,8 @@ export default function AdminPage() {
             <Card padding="xl" radius="lg" withBorder shadow="sm">
               <Title order={2} size="20px" mb="md" fw={800}>📂 Live Inventory Catalog ({products.length})</Title>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '500px', overflowY: 'auto' }}>
-                {products.map((p) => (
-                  <Card key={p.id} withBorder padding="sm" radius="md" style={{ backgroundColor: isDark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-gray-0)' }}>
+                {products.map((p, index) => (
+                  <Card key={p.id || index} withBorder padding="sm" radius="md" style={{ backgroundColor: isDark ? 'var(--mantine-color-dark-6)' : 'var(--mantine-color-gray-0)' }}>
                     <Group justify="between">
                       <div style={{ maxWidth: '75%' }}>
                         <Text fw={600} size="sm" lineClamp={1}>{p.title}</Text>
@@ -152,19 +149,20 @@ export default function AdminPage() {
                 <Text c="dimmed" size="sm">No custom message submission forms captured inside database rows yet.</Text>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '500px', overflowY: 'auto' }}>
-                  {messages.map((m) => (
-                    <Card key={m.id} withBorder padding="md" radius="md" shadow="xs">
+                  {messages.map((m, idx) => (
+                    <Card key={m.id || idx} withBorder padding="md" radius="md" shadow="xs">
                       <Group justify="between" align="start" mb="xs">
                         <div>
-                          <Text fw={700} size="sm">{m.name || 'Anonymous User'}</Text>
-                          <Text size="xs" c="blue">{m.email}</Text>
+                          {/* Loose fallback mappings handling lowercase and capitalized properties seamlessly */}
+                          <Text fw={700} size="sm">{m.name || m.Name || 'Anonymous User'}</Text>
+                          <Text size="xs" c="blue">{m.email || m.Email || 'No Email'}</Text>
                         </div>
-                        <Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteMessage(m.id)}>
+                        <Button size="xs" color="red" variant="light" radius="md" onClick={() => handleDeleteMessage(m.id || m.ID || idx)}>
                           Clear Log
                         </Button>
                       </Group>
                       <Text size="xs" c={isDark ? 'gray.4' : 'gray.8'} style={{ backgroundColor: isDark ? 'var(--mantine-color-dark-5)' : '#f8f9fa', padding: '10px', borderRadius: '6px', whiteSpace: 'pre-wrap' }}>
-                        {m.message}
+                        {m.message || m.Message || 'Empty message content.'}
                       </Text>
                     </Card>
                   ))}
@@ -178,3 +176,4 @@ export default function AdminPage() {
     </AppShell>
   );
 }
+
