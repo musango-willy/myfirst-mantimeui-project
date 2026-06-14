@@ -3527,6 +3527,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stripe/stripe-js@npm:^9.8.0":
+  version: 9.8.0
+  resolution: "@stripe/stripe-js@npm:9.8.0"
+  checksum: 10c0/90c473b938800a3c7f5794e052b22b2a277e1e61a1b54353a8117c3fd630e42cba2530d42ca12a9e06b674cd3ad5d74adf815b54763dc14726aeb05056592031
+  languageName: node
+  linkType: hard
+
 "@supabase/auth-js@npm:2.108.1":
   version: 2.108.1
   resolution: "@supabase/auth-js@npm:2.108.1"
@@ -8409,6 +8416,7 @@ __metadata:
     "@storybook/addon-themes": "npm:^10.0.0"
     "@storybook/nextjs": "npm:^10.0.0"
     "@storybook/react": "npm:^10.0.0"
+    "@stripe/stripe-js": "npm:^9.8.0"
     "@supabase/supabase-js": "npm:^2.108.1"
     "@tabler/icons-react": "npm:^3.35.0"
     "@testing-library/dom": "npm:^10.4.1"
@@ -8435,6 +8443,7 @@ __metadata:
     react-dom: "npm:19.2.7"
     resend: "npm:^6.12.4"
     storybook: "npm:^10.0.0"
+    stripe: "npm:^22.2.1"
     stylelint: "npm:^17.0.0"
     stylelint-config-standard-scss: "npm:^17.0.0"
     ts-jest: "npm:^29.4.4"
@@ -11021,6 +11030,18 @@ __metadata:
   version: 3.1.1
   resolution: "strip-json-comments@npm:3.1.1"
   checksum: 10c0/9681a6257b925a7fa0f285851c0e613cc934a50661fa7bb41ca9cbbff89686bb4a0ee366e6ecedc4daafd01e83eee0720111ab294366fe7c185e935475ebcecd
+  languageName: node
+  linkType: hard
+
+"stripe@npm:^22.2.1":
+  version: 22.2.1
+  resolution: "stripe@npm:22.2.1"
+  peerDependencies:
+    "@types/node": ">=18"
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+  checksum: 10c0/9337d2ded05d12f4efffb502be4eb4ce7e2e0298e89e7ebac6cae4ecaa8ba23d13d00fa87a47291f364c1373699b7a8544fc6f12ab0681b538d836bdda73b0aa
   languageName: node
   linkType: hard
 
