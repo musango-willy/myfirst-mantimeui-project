@@ -55,17 +55,32 @@ export default function HomePage() {
     },
   });
 
+    // Add this logic snippet right inside your existing useEffect array hook inside app/page.tsx:
   useEffect(() => {
+    // 1. Existing database fetching logic...
     async function loadProducts() {
       try {
-        const { data, error } = await supabase.from('products').select('*');
-        if (!error && data && data.length > 0) setProducts(data);
+        const { data } = await supabase.from('products').select('*');
+        if (data) setProducts(data);
       } catch (err) {
-        console.log("Database fetch offline. Using stable internal cache.");
+        console.error(err);
       }
     }
     loadProducts();
+
+    // 2. NEW CART CLEARING MECHANISM: Detect return parameters from Stripe canvas redirections
+    if (typeof window !== 'undefined') {
+      const queryParams = new URLSearchParams(window.location.search);
+      if (queryParams.get('success') === 'true') {
+        setCart([]); // Wipe out all item states inside browser cart memory array instantly!
+        alert('🎉 Payment Succeeded! Thank you for your purchase. Your shopping cart has been cleared successfully.');
+        // Clean out the success parameter from the URL address bar cleanly
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
   }, []);
+
+    
 
   const addToCart = (product: ProductRow) => {
     setCart((prev) => {
