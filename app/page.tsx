@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { 
   Container, Title, Text, Button, Group, SimpleGrid, Card, 
-  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, Drawer, Divider, Badge, Stack, TextInput, Textarea
-} from '@mantine/core';
+  AppShell, Burger, Box, ActionIcon, useMantineColorScheme, 
+  Drawer, Divider, Badge, TextInput, Textarea, Stack, Center
+} from '@mantine/core'; // <-- FIXED: Added missing Stack and Textarea component wrappers
 import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
 import { createClient } from '@supabase/supabase-js';
@@ -16,7 +17,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZwaWtjdWRobGtieW5teWN0cmRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjQ4OTEsImV4cCI6MjA5Njg0MDg5MX0.7e4JH1IJ2sxpRR2mDpVwAJ5lLQkx7h0IHZfMxYKnmU8'
 );
 
-// 1. DYNAMIC CATALOG STORAGE MAPS (Electronics, Clothing, and Furniture Selections)
 const FALLBACK_PRODUCTS = [
   { title: 'Pro Wireless Headphones', price: 99, description: 'Active noise-cancelling over-ear layout with a 40-hour runtime.', image_url: 'https://unsplash.com' },
   { title: 'Mechanical Gaming Keyboard', price: 129, description: 'RGB backlit mechanical frame featuring hot-swappable brown switches.', image_url: 'https://unsplash.com' },
@@ -39,34 +39,29 @@ export default function HomePage() {
   const [cartOpened, { open: openCart, close: closeCart }] = useDisclosure(false);
   const [products, setProducts] = useState<ProductRow[]>(FALLBACK_PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Inquiry Validation Form Hooks
-  const contactForm = useForm({
+  const form = useForm({
     validateInputOnChange: true,
     initialValues: { name: '', email: '', message: '' },
     validate: {
-      name: (val) => (val.trim().length < 2 ? 'Name is required' : null),
-      email: (val) => (/^\S+@\S+\.\S+$/.test(val) ? null : 'Invalid email pattern'),
-      message: (val) => (val.trim().length === 0 ? 'Message content is required' : null),
-    }
+      name: (value) => (value.trim().length < 2 ? 'Name must have at least 2 characters' : null),
+      email: (value) => (/^\S+@\S+\.\S+$/.test(value) ? null : 'Invalid email address format'),
+      message: (value) => (value.trim().length === 0 ? 'Message content cannot be empty' : null),
+    },
   });
 
   useEffect(() => {
-    setMounted(true);
     async function loadProducts() {
       try {
         const { data, error } = await supabase.from('products').select('*');
-        if (!error && data && data.length > 0) {
-          setProducts(data);
-        }
+        if (!error && data && data.length > 0) setProducts(data);
       } catch (err) {
-        console.log("Using direct fallback cache mapping loops.");
+        console.log("Database fetch offline. Using stable internal cache.");
       }
     }
     loadProducts();
@@ -87,7 +82,6 @@ export default function HomePage() {
     setCart((prev) => prev.filter((item) => item.title !== title));
   };
 
-  // 2. STRIPE REDIRECT ACTION LOOP (Computes checkout totals securely on server api layer)
   const handleCheckoutRedirect = async () => {
     try {
       const response = await fetch('/api/checkout', {
@@ -95,23 +89,20 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cartItems: cart }),
       });
-
       const data = await response.json();
-
       if (data.url) {
-        window.location.href = data.url; // Bounce client browser directly to Stripe Hosted Checkout Canvas
+        window.location.href = data.url;
       } else {
-        alert('Stripe Gate Intercept Error: ' + (data.error || 'Check server logs.'));
+        alert('Stripe configuration error: ' + (data.error || 'Failed to initialize gateway'));
       }
     } catch (err: any) {
-      alert('Transmission crash: ' + err.message);
+      alert('Network routing failed: ' + err.message);
     }
   };
 
-  // 3. CONTACT MAIL LOG ROUTINE (Routes leads to your gmail inbox and logs to database)
-  const handleContactSubmit = async (values: typeof contactForm.values) => {
-    setEmailLoading(true);
-    setEmailSuccess(false);
+  const handleInquirySubmit = async (values: typeof form.values) => {
+    setLoading(true);
+    setSuccess(false);
     try {
       const response = await fetch('/api/send', {
         method: 'POST',
@@ -120,22 +111,20 @@ export default function HomePage() {
       });
       const data = await response.json();
       if (!response.ok || data.error) {
-        alert('Email routing failure: ' + (data.error || 'Network latency drop.'));
+        alert('Email routing failure: ' + (data.error || 'Check Resend console log keys'));
       } else {
-        setEmailSuccess(true);
-        contactForm.reset();
+        setSuccess(true);
+        form.reset();
       }
     } catch (err: any) {
-      alert('Network transmission failed: ' + err.message);
+      alert('Connection block: ' + err.message);
     } finally {
-      setEmailLoading(false);
+      setLoading(false);
     }
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-  if (!mounted) return null;
 
   return (
     <AppShell header={{ height: 60 }} navbar={{ width: 300, breakpoint: 'sm', collapsed: { desktop: true, mobile: !opened } }} padding="md">
@@ -143,21 +132,16 @@ export default function HomePage() {
         <Container size="lg" h="100%">
           <Group justify="between" h="100%">
             <Text fw={900} size="xl" variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>MANTINE.io</Text>
-            
             <Group gap="xl" visibleFrom="sm">
-              <Text component="a" href="#" fw={500} size="sm" c="dimmed">Features</Text>
               <Text component="a" href="#catalog" fw={500} size="sm" c="dimmed">Store Catalog</Text>
-              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Contact Form</Text>
+              <Text component="a" href="#contact" fw={500} size="sm" c="dimmed">Get In Touch</Text>
             </Group>
-
             <Group visibleFrom="sm">
               <ActionIcon onClick={() => toggleColorScheme()} variant="default" size="lg" radius="md">
                 {isDark ? '☀️' : '🌙'}
               </ActionIcon>
-              <Button onClick={openCart} variant="light" color="violet.6">
-                🛒 Cart ({totalItems})
-              </Button>
-              <Button variant="default" component="a" href="/admin">Admin Panel</Button>
+              <Button onClick={openCart} variant="light" color="violet.6">🛒 Cart ({totalItems})</Button>
+              <Button variant="default" component="a" href="/admin">Admin</Button>
             </Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
           </Group>
@@ -174,21 +158,12 @@ export default function HomePage() {
       <AppShell.Main pt={80} style={{ position: 'relative', zIndex: 10 }}>
         <Container size="lg" py={40}>
           
-          {/* Marketplace Grid Component Layout */}
+          {/* Storefront Section */}
           <Box id="catalog" style={{ scrollMarginTop: '80px', marginBottom: '100px' }}>
             <Box style={{ textAlign: 'center', marginBottom: '50px' }}>
-              <Title
-                order={1}
-                size="36px"
-                fw={900}
-                style={{
-                  backgroundImage: 'linear-gradient(90deg, #7c3aed, #4f46e5)',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                }}
-              >
+              <Text component="h1" size="36px" fw={900} variant="gradient" gradient={{ from: 'violet.6', to: 'indigo.6' }}>
                 Assorted Multi-Category Marketplace
-              </Title>
+              </Text>
               <Text c="dimmed" mt="xs">Streamed live from our secure PostgreSQL database rows.</Text>
             </Box>
 
@@ -199,17 +174,86 @@ export default function HomePage() {
                     <img src={product.image_url} alt={product.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </Box>
                   <Group justify="between" mb="xs">
-                    <Text fw={700}>{product.title}</Text>
-                    <Badge color="violet" variant="light">${product.price}</Badge>
+                    <Text fw={700} size="sm" lineClamp={1}>{product.title}</Text>
+                    <Badge color="green" size="lg" variant="light">${product.price}</Badge>
                   </Group>
-                  <Text size="sm" color="dimmed" mb="md">{product.description}</Text>
-                  <Button fullWidth onClick={() => addToCart(product)}>Add to Cart</Button>
+                  <Text size="xs" c="dimmed" style={{ flexGrow: 1 }} lineClamp={2}>{product.description}</Text>
+                  <Button fullWidth mt="xl" color="violet.6" radius="md" onClick={() => addToCart(product)}>Add to Cart</Button>
                 </Card>
               ))}
             </SimpleGrid>
           </Box>
+
+          <Divider my="xl" />
+
+          {/* Contact Section */}
+          <Box id="contact" style={{ scrollMarginTop: '80px', maxWidth: '600px', margin: '0 auto' }}>
+            <Box style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <Title order={2} size="28px" fw={900}>Get In Touch</Title>
+              <Text c="dimmed" mt="xs">We'd love to hear from you. Send us your inquiry.</Text>
+            </Box>
+
+            {success && <Badge color="green" fullWidth mb="md">Message sent successfully! We'll respond soon.</Badge>}
+
+            <form onSubmit={form.onSubmit(handleInquirySubmit)}>
+              <Stack gap="md">
+                <TextInput
+                  label="Your Name"
+                  placeholder="John Doe"
+                  {...form.getInputProps('name')}
+                />
+                <TextInput
+                  label="Email Address"
+                  placeholder="john@example.com"
+                  {...form.getInputProps('email')}
+                />
+                <Textarea
+                  label="Message"
+                  placeholder="Tell us what you're thinking..."
+                  minRows={4}
+                  {...form.getInputProps('message')}
+                />
+                <Button type="submit" color="violet.6" loading={loading} fullWidth>
+                  Send Inquiry
+                </Button>
+              </Stack>
+            </form>
+          </Box>
         </Container>
       </AppShell.Main>
+
+      {/* Cart Drawer */}
+      <Drawer opened={cartOpened} onClose={closeCart} title="Shopping Cart" position="right" size="md">
+        {cart.length === 0 ? (
+          <Center h={200}>
+            <Text c="dimmed">Your cart is empty</Text>
+          </Center>
+        ) : (
+          <Stack gap="md" h="100%">
+            {cart.map((item, idx) => (
+              <Card key={idx} padding="md" withBorder>
+                <Group justify="between" mb="xs">
+                  <Text fw={600}>{item.title}</Text>
+                  <Badge color="blue">{item.quantity}x</Badge>
+                </Group>
+                <Text size="sm" c="dimmed" mb="xs">${item.price} each</Text>
+                <Group justify="between">
+                  <Text size="sm" fw={600}>${item.price * item.quantity}</Text>
+                  <Button size="xs" color="red" variant="light" onClick={() => removeFromCart(item.title)}>Remove</Button>
+                </Group>
+              </Card>
+            ))}
+            <Divider />
+            <Box style={{ marginTop: 'auto' }}>
+              <Group justify="between" mb="lg">
+                <Text fw={700} size="lg">Total:</Text>
+                <Text fw={700} size="lg">${cartTotal.toFixed(2)}</Text>
+              </Group>
+              <Button fullWidth color="violet.6" onClick={handleCheckoutRedirect}>Proceed to Checkout</Button>
+            </Box>
+          </Stack>
+        )}
+      </Drawer>
     </AppShell>
   );
 }
